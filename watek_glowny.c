@@ -49,7 +49,7 @@ void mainLoop()
             sleep(SEC_IN_STATE);
             debug("Z przyjemnością ogłaszamy że tym razem start się uda");
             sleep(SEC_IN_STATE);
-            changeState(FinishedTables);
+            changeState(FinishedRoom);
         }else if (stan == FinishedRoom){
             pkt->data = ROOM;
             for (int i=0; i<size;i++){
