@@ -9,7 +9,7 @@ void *startKomWatek(void *ptr)
     packet_t pakiet;
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while ( stan!=InFinish ) {
-	debug("czekam na recv");
+	//debug("czekam na recv");
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
 		pthread_mutex_lock(&lamportMut);
@@ -24,50 +24,53 @@ void *startKomWatek(void *ptr)
 
 		switch ( status.MPI_TAG){
 			case REQUEST:
+				//debug("Got REQUEST");
 				switch (pakiet.data){
 					case DESK:
-						if (stan == InWaitForTables || stan == InTables || stan == InWaitForTable || stan == InTable){
-							if (pakiet.ts < lamport) {
+						if (stan == InWaitForTables ||  stan == InWaitForTable ){
+							if (pakiet.ts < my_request) {
 								pakiet.tables = team_size;
 								sendPacket(&pakiet, pakiet.src, ACK);
 							}else{
 								table[pakiet.src] = 1;
 							} 
+						}else if(stan == InTables || stan == InTable){
+							table[pakiet.src] = 1;
 						}else {
-							pakiet.ts = lamport;
 							pakiet.tables = team_size;
 							sendPacket(&pakiet, pakiet.src, ACK);
 						}
 					break;
 					case ROOM:
-						if (stan == InWaitForRoom || stan == InRoom){
-							if (pakiet.ts < lamport) {
-								pakiet.ts = lamport;
+						if (stan == InWaitForRoom ){
+							if (pakiet.ts < my_request) {
 								sendPacket(&pakiet, pakiet.src, ACK);
 							}else{
 								room[pakiet.src] = 1;
 							} 
+						}else if(stan == InRoom){
+							room[pakiet.src] = 1;
 						}else {
-							pakiet.ts = lamport;
 							sendPacket(&pakiet, pakiet.src, ACK);
 						}
 					break;
 					case LAUNCHPAD:
-						if (stan == InWaitForLaunchPad || stan == InLaunchPad){
-							if (pakiet.ts < lamport) {
-								pakiet.ts = lamport;
+						if (stan == InWaitForLaunchPad){
+							if (pakiet.ts < my_request) {
 								sendPacket(&pakiet, pakiet.src, ACK);
 							}else{
 								launchpad[pakiet.src] = 1;
 							} 
+						}else if(stan == InLaunchPad){
+							launchpad[pakiet.src] = 1;
 						}else {
-							pakiet.ts = lamport;
 							sendPacket(&pakiet, pakiet.src, ACK);
 						}
 					break;
 				}
 			break;
 			case ACK:
+				//debug("Got ACK");
 				switch (pakiet.data){
 					case DESK:
 						if (stan == InWaitForTables || stan == InWaitForTable){
@@ -75,8 +78,13 @@ void *startKomWatek(void *ptr)
 							current_tables_taken = current_tables_taken - pakiet.tables;
 							pthread_mutex_unlock( &teamMut );
 							table[pakiet.src] = 0;
+							debug("Czekam aż będzie dostępne więcej niż %i a jest %i", total_desks, current_tables_taken);
 							if (current_tables_taken <= total_desks){
-								changeState(InTables);
+								if (stan == InWaitForTables){
+									changeState(InTables);
+								}else{
+									changeState(InTable);
+								}
 							}
 						}
 					break;
@@ -93,6 +101,7 @@ void *startKomWatek(void *ptr)
 					break;
 					case LAUNCHPAD:
 						if (stan == InWaitForLaunchPad){
+							debug("Zajętych jest %i a może być %i", current_pads_taken, total_pads);
 							pthread_mutex_lock( &teamMut );
 							current_pads_taken--;
 							pthread_mutex_unlock( &teamMut );
@@ -105,6 +114,7 @@ void *startKomWatek(void *ptr)
 				}
 			break;
 			case INIT:
+				//debug("Got INIT");
 				increaseTeamSize(pakiet.data);
 			break;
 		}

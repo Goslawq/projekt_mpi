@@ -23,13 +23,15 @@ int team_size;
 int combined_team_size;
 int setup;
 
-int total_desks = 30;
+int total_desks = 40;
 int total_rooms = 2;
 int total_pads = 1;
 
 int current_tables_taken = 0;
 int current_rooms_taken = 0;
 int current_pads_taken = 0;
+
+int my_request = 0;
 
 int table[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int room[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -84,7 +86,7 @@ void inicjuj(int *argc, char ***argv)
     /* sklejone z stackoverflow */
     const int nitems=4; /* bo packet_t ma trzy pola */
     int       blocklengths[4] = {1,1,1,1};
-    MPI_Datatype typy[4] = {MPI_INT, MPI_INT, MPI_INT};
+    MPI_Datatype typy[4] = {MPI_INT, MPI_INT, MPI_INT, MPI_INT};
 
     MPI_Aint     offsets[4]; 
     offsets[0] = offsetof(packet_t, ts);
@@ -98,12 +100,20 @@ void inicjuj(int *argc, char ***argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     srand(rank);
-	lamport = 0;
+	lamport = rank;
     team_size = member_count[rank];
     combined_team_size = member_count[rank];
     setup = 1;
     current_rooms_taken = size;
     current_pads_taken = size;
+
+	packet_t *pkt = malloc(sizeof(packet_t));
+	pkt->data = team_size;
+	for (int i=0; i<size;i++){
+                if (i != rank){
+                    sendPacket(pkt, i, INIT);
+                }
+            }
 
 
     pthread_create( &threadKom, NULL, startKomWatek , 0);

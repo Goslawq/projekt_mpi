@@ -57,6 +57,7 @@ extern int total_pads;
 extern int current_tables_taken;
 extern int current_rooms_taken;
 extern int current_pads_taken;
+extern int my_request;
 
 
 /* zegar Lamporta*/

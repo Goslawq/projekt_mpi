@@ -9,7 +9,8 @@ void mainLoop()
         if (stan == InSetup){
             if (setup < size){
                 continue;
-            } else if (setup == rank){
+            } else if (setup == size){
+				
                 changeState( FinishedSetup );
             }
         } else if (stan == FinishedSetup){
@@ -17,7 +18,10 @@ void mainLoop()
             for (int i=0; i<size;i++){
                 sendPacket(pkt, i, REQUEST);
             }
-            free(pkt);
+				pthread_mutex_lock( &teamMut );
+				int my_request = lamport;
+				pthread_mutex_unlock( &teamMut );
+
             changeState(InWaitForTables);
         //} else if (stan == InWaitForTables){
         //    sleep(SEC_IN_STATE);
@@ -34,7 +38,7 @@ void mainLoop()
                     sendPacket(pkt, i, ACK);
                 }
             }
-            free(pkt);
+            
             pthread_mutex_lock( &teamMut );
             current_tables_taken = combined_team_size;
             current_rooms_taken = size;
@@ -43,7 +47,9 @@ void mainLoop()
             for (int i=0; i<size;i++){
                 sendPacket(pkt, i, REQUEST);
             }
-            free(pkt);
+				pthread_mutex_lock( &teamMut );
+				int my_request = lamport;
+				pthread_mutex_unlock( &teamMut );
             changeState(InWaitForRoom);
         } else if (stan == InRoom){
             sleep(SEC_IN_STATE);
@@ -51,22 +57,30 @@ void mainLoop()
             sleep(SEC_IN_STATE);
             changeState(FinishedRoom);
         }else if (stan == FinishedRoom){
+			//debug("Started FinishedRoom")
             pkt->data = ROOM;
             for (int i=0; i<size;i++){
+				//debug("FinishedRoom loop %i", i);
                 if (room[i] == 1){
+					debug("FinishedRoom loop %i, sending packet", i);
                     sendPacket(pkt, i, ACK);
                 }
             }
-            free(pkt);
+			//debug("Przed free");
+            
+			//debug("Sent FinishedRoom Requests")
             pthread_mutex_lock( &teamMut );
             current_rooms_taken = size;
             current_pads_taken = size;
+			debug("mainthread c_p_t = %i", current_pads_taken);
             pthread_mutex_unlock( &teamMut );
             pkt->data = LAUNCHPAD;
             for (int i=0; i<size;i++){
                 sendPacket(pkt, i, REQUEST);
             }
-            free(pkt);
+				pthread_mutex_lock( &teamMut );
+				int my_request = lamport;
+				pthread_mutex_unlock( &teamMut );
             changeState(InWaitForLaunchPad);
         }else if (stan == InLaunchPad){
             
@@ -81,7 +95,7 @@ void mainLoop()
                     sendPacket(pkt, i, ACK);
                 }
             }
-            free(pkt);
+            
             pthread_mutex_lock( &teamMut );
             current_pads_taken = size;
             current_tables_taken = combined_team_size - team_size + 1;
@@ -90,13 +104,16 @@ void mainLoop()
             for (int i=0; i<size;i++){
                 sendPacket(pkt, i, REQUEST);
             }
-            free(pkt);
+            	pthread_mutex_lock( &teamMut );
+				int my_request = lamport;
+				pthread_mutex_unlock( &teamMut );
+
             changeState(InWaitForTable);
         }else if (stan == InTable){
             sleep(SEC_IN_STATE);
             debug("Ok, więc nie udało się bo....");
             sleep(SEC_IN_STATE);
-            changeState(FinishedTables);
+            changeState(FinishedTable);
         } else if (stan == FinishedTable){
             pkt->data = DESK;
             pkt->tables = team_size;
@@ -105,7 +122,7 @@ void mainLoop()
                     sendPacket(pkt, i, ACK);
                 }
             }
-            free(pkt);
+            
             pthread_mutex_lock( &teamMut );
             current_tables_taken = combined_team_size;
             pthread_mutex_unlock( &teamMut );
@@ -113,7 +130,10 @@ void mainLoop()
             for (int i=0; i<size;i++){
                 sendPacket(pkt, i, REQUEST);
             }
-            free(pkt);
+				pthread_mutex_lock( &teamMut );
+				int my_request = lamport;
+				pthread_mutex_unlock( &teamMut );
+
             changeState(InWaitForTables);
         }else{
             sleep(SEC_IN_STATE);
