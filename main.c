@@ -24,7 +24,7 @@ int combined_team_size;
 int setup;
 
 int total_desks = 40;
-int total_rooms = 2;
+int total_rooms = 1;
 int total_pads = 1;
 
 int current_tables_taken = 0;
@@ -32,6 +32,7 @@ int current_rooms_taken = 0;
 int current_pads_taken = 0;
 
 int my_request = 0;
+int reqTime = 0;
 
 int table[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int room[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -91,6 +92,7 @@ void inicjuj(int *argc, char ***argv)
     MPI_Aint     offsets[4]; 
     offsets[0] = offsetof(packet_t, ts);
     offsets[1] = offsetof(packet_t, src);
+    //offsets[2] = offsetof(packet_t, reqTime);
     offsets[2] = offsetof(packet_t, data);
     offsets[3] = offsetof(packet_t, tables);
 
@@ -100,7 +102,10 @@ void inicjuj(int *argc, char ***argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     srand(rank);
-	lamport = rank;
+	my_request = rank;
+//	debug("pierwsze my_req %i", my_request);
+	reqTime = my_request;
+//	debug("pierwsze reqTime %i", reqTime);
     team_size = member_count[rank];
     combined_team_size = member_count[rank];
     setup = 1;
@@ -144,11 +149,23 @@ void sendPacket(packet_t *pkt, int destination, int tag)
     if (pkt==0) { pkt = malloc(sizeof(packet_t)); freepkt=1;}
     pkt->src = rank;
 	pthread_mutex_lock(&lamportMut);
-	lamport++;
-	pkt->ts = lamport;
+	//my_request++;
+	pkt->ts = my_request;
 	pthread_mutex_unlock(&lamportMut);
     MPI_Send( pkt, 1, MPI_PAKIET_T, destination, tag, MPI_COMM_WORLD);
     if (freepkt) free(pkt);
+}
+
+void updateClock(int newClock){
+		pthread_mutex_lock(&lamportMut);
+                if (my_request >= newClock){
+                        my_request++;
+                }else{
+                        my_request = newClock;
+                        my_request++;
+                }
+                //my_request = new_lamport;
+                pthread_mutex_unlock(&lamportMut);
 }
 
 // void changeTallow( int newTallow )

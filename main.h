@@ -58,7 +58,7 @@ extern int current_tables_taken;
 extern int current_rooms_taken;
 extern int current_pads_taken;
 extern int my_request;
-
+extern int reqTime;
 
 /* zegar Lamporta*/
 extern int lamport;
@@ -71,7 +71,7 @@ pthread_mutex_t teamMut;
 typedef struct {
     int ts;       /* timestamp (zegar lamporta */
     int src;      /* pole nie przesyłane, ale ustawiane w main_loop */
-
+ 
     int data;     /* przykładowe pole z danymi; można zmienić nazwę na bardziej pasującą */
     int tables;
 } packet_t;
@@ -120,7 +120,7 @@ extern MPI_Datatype MPI_PAKIET_T;
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT,...) printf("%c[%d;%dm [%d], %d: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamport, ##__VA_ARGS__, 27,0,37);
+#define debug(FORMAT,...) printf("%c[%d;%dm [%d], %d: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, my_request, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #endif
@@ -143,4 +143,5 @@ void sendPacket(packet_t *pkt, int destination, int tag);
 void changeState( state_t );
 //void changeTallow( int );
 void increaseTeamSize( int );
+void updateClock(int newClock);
 #endif
